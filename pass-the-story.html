@@ -1,0 +1,480 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <meta name="color-scheme" content="light dark" />
+  <title>Pass the Story</title>
+  <meta name="description" content="An anonymous collaborative story game. Add 140 characters, then pass it on." />
+  <style>
+    :root{
+      --bg:#0b0c10; --card:#111318; --text:#e8eaf0; --muted:#a6adbb;
+      --line:#222632; --accent:#7aa2f7; --accent2:#62d6c8;
+      --shadow: 0 10px 30px rgba(0,0,0,.35);
+      --radius: 16px; --max: 680px;
+    }
+    @media (prefers-color-scheme: light){
+      :root{
+        --bg:#fafbff; --card:#ffffff; --text:#10131a; --muted:#4f5b6d;
+        --line:#e6eaf2; --shadow: 0 10px 30px rgba(0,0,0,.08);
+      }
+    }
+    *{ box-sizing:border-box; margin:0; padding:0; }
+    html,body{ height:100%; }
+    body{
+      font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial;
+      background: radial-gradient(1200px 700px at 15% 10%, rgba(122,162,255,.14), transparent 60%),
+                  radial-gradient(900px 600px at 85% 15%, rgba(98,214,200,.12), transparent 55%),
+                  var(--bg);
+      color: var(--text);
+      min-height: 100%;
+    }
+    a{ color: var(--accent); text-decoration: none; }
+    a:hover{ text-decoration: underline; text-underline-offset: 3px; }
+
+    header{
+      position: sticky; top: 0; z-index: 30;
+      backdrop-filter: blur(10px);
+      background: color-mix(in srgb, var(--bg) 75%, transparent);
+      border-bottom: 1px solid var(--line);
+    }
+    .nav{
+      max-width: var(--max); margin: 0 auto; padding: 12px 20px;
+      display: flex; align-items: center; justify-content: space-between; gap: 14px;
+    }
+    .brand{ font-weight: 650; letter-spacing: .2px; display: flex; align-items: center; gap: 10px; }
+    .logo{
+      width: 30px; height: 30px; border-radius: 10px;
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+    }
+    .pill{
+      display: inline-flex; align-items: center; gap: 8px;
+      padding: 8px 12px; border-radius: 999px;
+      border: 1px solid var(--line);
+      background: color-mix(in srgb, var(--card) 82%, transparent);
+      font-size: 13px; cursor: pointer; color: var(--text);
+    }
+    .pill:hover{ border-color: color-mix(in srgb, var(--accent) 55%, var(--line)); text-decoration: none; }
+
+    .wrap{ max-width: var(--max); margin: 0 auto; padding: 40px 20px 80px; }
+
+    .card{
+      background: color-mix(in srgb, var(--card) 92%, transparent);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+    }
+
+    /* Screens */
+    .screen{ display: none; }
+    .screen.active{ display: block; }
+
+    /* Start screen */
+    #startScreen{ text-align: center; padding: 60px 20px; }
+    #startScreen h1{ font-size: clamp(28px, 5vw, 42px); line-height: 1.1; margin-bottom: 14px; letter-spacing: -.5px; }
+    #startScreen p{ color: var(--muted); font-size: 15px; line-height: 1.6; max-width: 420px; margin: 0 auto 32px; }
+    .rules{ display: grid; gap: 10px; margin-bottom: 32px; }
+    .rule{
+      padding: 14px 16px; border-radius: 12px;
+      border: 1px solid var(--line);
+      background: color-mix(in srgb, var(--card) 92%, transparent);
+      font-size: 13.5px; color: var(--muted); text-align: left;
+      display: flex; gap: 12px; align-items: flex-start;
+    }
+    .rule-num{
+      font-weight: 700; color: var(--accent); flex-shrink: 0;
+      width: 22px; text-align: right;
+    }
+
+    /* Play screen */
+    #playScreen .card{ padding: 20px; margin-bottom: 14px; }
+    .turn-badge{
+      font-size: 12px; color: var(--muted); margin-bottom: 10px;
+      display: flex; align-items: center; gap: 8px;
+    }
+    .dot{ width: 7px; height: 7px; border-radius: 50%; background: var(--accent); flex-shrink: 0; }
+    .last-segment{
+      font-size: 17px; line-height: 1.6; font-style: italic;
+      color: var(--text); margin-bottom: 0;
+    }
+    .last-segment.empty{ color: var(--muted); font-style: normal; font-size: 15px; }
+    .input-area{ margin-top: 14px; }
+    textarea{
+      width: 100%; padding: 12px 14px; border-radius: 12px;
+      border: 1px solid var(--line);
+      background: color-mix(in srgb, var(--card) 92%, transparent);
+      color: var(--text);
+      font-family: inherit; font-size: 15px; line-height: 1.55;
+      resize: none; outline: none; min-height: 90px;
+    }
+    textarea:focus{
+      border-color: color-mix(in srgb, var(--accent) 60%, var(--line));
+      box-shadow: 0 0 0 4px color-mix(in srgb, var(--accent) 12%, transparent);
+    }
+    .char-row{
+      display: flex; justify-content: space-between; align-items: center;
+      margin-top: 8px; font-size: 12.5px;
+    }
+    .char-count{ color: var(--muted); }
+    .char-count.warn{ color: #f7a84a; }
+    .char-count.over{ color: #f76a6a; font-weight: 600; }
+    .action-row{ display: flex; gap: 10px; margin-top: 14px; flex-wrap: wrap; }
+    .btn{
+      display: inline-flex; align-items: center; gap: 8px;
+      padding: 10px 16px; border-radius: 999px;
+      border: 1px solid color-mix(in srgb, var(--accent) 45%, var(--line));
+      background: linear-gradient(135deg,
+        color-mix(in srgb, var(--accent) 22%, var(--card)),
+        color-mix(in srgb, var(--accent2) 16%, var(--card)));
+      color: var(--text); font-size: 13.5px; font-weight: 600;
+      cursor: pointer; font-family: inherit;
+    }
+    .btn:hover{ filter: brightness(1.06); }
+    .btn:disabled{ opacity: .45; cursor: not-allowed; filter: none; }
+    .btn.secondary{
+      background: color-mix(in srgb, var(--card) 90%, transparent);
+      border: 1px solid var(--line);
+      font-weight: 500;
+    }
+    .btn.danger{
+      background: color-mix(in srgb, #f76a6a 14%, var(--card));
+      border-color: color-mix(in srgb, #f76a6a 45%, var(--line));
+    }
+
+    .progress-bar-wrap{
+      height: 3px; border-radius: 999px;
+      background: var(--line); overflow: hidden; margin-bottom: 14px;
+    }
+    .progress-bar{
+      height: 100%; border-radius: 999px;
+      background: linear-gradient(90deg, var(--accent), var(--accent2));
+      transition: width .3s ease;
+    }
+
+    /* Reveal screen */
+    #revealScreen .story-header{
+      display: flex; justify-content: space-between; align-items: flex-start;
+      gap: 12px; margin-bottom: 20px; flex-wrap: wrap;
+    }
+    #revealScreen h2{ font-size: 22px; letter-spacing: -.3px; }
+    .story-meta{ font-size: 13px; color: var(--muted); margin-top: 4px; }
+    .segments{ display: grid; gap: 10px; margin-bottom: 20px; }
+    .segment{
+      padding: 14px 16px; border-radius: 12px;
+      border: 1px solid var(--line);
+      background: color-mix(in srgb, var(--card) 90%, transparent);
+    }
+    .segment-num{ font-size: 11px; color: var(--muted); margin-bottom: 6px; letter-spacing: .5px; text-transform: uppercase; }
+    .segment-text{ font-size: 15px; line-height: 1.6; }
+    .export-row{ display: flex; gap: 10px; flex-wrap: wrap; }
+
+    /* Toast */
+    .toast{
+      position: fixed; left: 50%; bottom: 20px; transform: translateX(-50%) translateY(10px);
+      padding: 10px 16px; border-radius: 999px;
+      border: 1px solid var(--line);
+      background: color-mix(in srgb, var(--card) 94%, transparent);
+      box-shadow: var(--shadow);
+      color: var(--text); font-size: 13px;
+      opacity: 0; transition: opacity .2s, transform .2s;
+      pointer-events: none; white-space: nowrap;
+      z-index: 100;
+    }
+    .toast.show{ opacity: 1; transform: translateX(-50%) translateY(0); }
+
+    footer{
+      margin-top: 48px; padding-top: 16px;
+      border-top: 1px solid var(--line);
+      color: var(--muted); font-size: 12.5px;
+      display: flex; justify-content: space-between; gap: 10px; flex-wrap: wrap;
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="nav">
+    <div class="brand">
+      <div class="logo" aria-hidden="true"></div>
+      Pass the Story
+    </div>
+    <a class="pill" href="./index.html">Back to portfolio</a>
+  </div>
+</header>
+
+<main class="wrap">
+
+  <!-- Start Screen -->
+  <div id="startScreen" class="screen active">
+    <h1>Pass the Story</h1>
+    <p>
+      A collaborative writing game with one rule: you can only see the last line before you write your own.
+      Pass the page when you're done.
+    </p>
+
+    <div class="rules">
+      <div class="rule"><span class="rule-num">1</span> Each player adds up to 140 characters.</div>
+      <div class="rule"><span class="rule-num">2</span> You only see the previous line, not the full story.</div>
+      <div class="rule"><span class="rule-num">3</span> Reveal the full story anytime. Export it when you're done.</div>
+    </div>
+
+    <button class="btn" onclick="startStory()">Start a Story</button>
+  </div>
+
+  <!-- Play Screen -->
+  <div id="playScreen" class="screen">
+    <div class="card">
+      <div class="turn-badge">
+        <div class="dot"></div>
+        <span id="turnLabel">Turn 1</span>
+      </div>
+
+      <div id="lastSegment" class="last-segment empty">
+        This is the start of the story. Write the opening line.
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="input-area">
+        <textarea
+          id="storyInput"
+          placeholder="Continue the story..."
+          maxlength="160"
+          oninput="onInput()"
+          onkeydown="onKeyDown(event)"
+        ></textarea>
+        <div class="char-row">
+          <span id="charCount" class="char-count">0 / 140</span>
+          <span style="font-size:12px; color:var(--muted);">Shift+Enter to add</span>
+        </div>
+      </div>
+
+      <div class="action-row">
+        <button class="btn" id="addBtn" onclick="addLine()" disabled>Add My Line</button>
+        <button class="btn secondary" onclick="revealStory()">Reveal Story</button>
+        <button class="btn secondary danger" onclick="confirmReset()">New Story</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Reveal Screen -->
+  <div id="revealScreen" class="screen">
+    <div class="card" style="padding:20px; margin-bottom:14px;">
+      <div class="story-header">
+        <div>
+          <h2>The Full Story</h2>
+          <div class="story-meta" id="storyMeta"></div>
+        </div>
+        <button class="pill" onclick="keepWriting()">Keep writing</button>
+      </div>
+
+      <div class="progress-bar-wrap">
+        <div class="progress-bar" id="storyProgress" style="width:100%"></div>
+      </div>
+
+      <div class="segments" id="segmentList"></div>
+
+      <div class="export-row">
+        <button class="btn" onclick="copyStory()">Copy to Clipboard</button>
+        <button class="btn secondary" onclick="downloadStory()">Download .txt</button>
+        <button class="btn secondary danger" onclick="confirmReset()">New Story</button>
+      </div>
+    </div>
+  </div>
+
+</main>
+
+<div class="toast" id="toast"></div>
+
+<script>
+  const STORAGE_KEY = "pass-the-story-v1";
+  const MAX_CHARS = 140;
+
+  function loadStory() {
+    try {
+      return JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]");
+    } catch {
+      return [];
+    }
+  }
+
+  function saveStory(segments) {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(segments));
+  }
+
+  function showScreen(id) {
+    document.querySelectorAll(".screen").forEach(s => s.classList.remove("active"));
+    document.getElementById(id).classList.add("active");
+  }
+
+  function toast(msg) {
+    const el = document.getElementById("toast");
+    el.textContent = msg;
+    el.classList.add("show");
+    clearTimeout(toast._t);
+    toast._t = setTimeout(() => el.classList.remove("show"), 2200);
+  }
+
+  function startStory() {
+    const segments = loadStory();
+    if (segments.length === 0) {
+      showScreen("playScreen");
+      updatePlayScreen([]);
+    } else {
+      showScreen("playScreen");
+      updatePlayScreen(segments);
+    }
+  }
+
+  function updatePlayScreen(segments) {
+    const turn = segments.length + 1;
+    document.getElementById("turnLabel").textContent = `Turn ${turn}`;
+
+    const lastEl = document.getElementById("lastSegment");
+    if (segments.length === 0) {
+      lastEl.textContent = "This is the start of the story. Write the opening line.";
+      lastEl.classList.add("empty");
+    } else {
+      lastEl.textContent = "“" + segments[segments.length - 1].text + "”";
+      lastEl.classList.remove("empty");
+    }
+
+    document.getElementById("storyInput").value = "";
+    document.getElementById("charCount").textContent = `0 / ${MAX_CHARS}`;
+    document.getElementById("charCount").className = "char-count";
+    document.getElementById("addBtn").disabled = true;
+    document.getElementById("storyInput").focus();
+  }
+
+  function onInput() {
+    const input = document.getElementById("storyInput");
+    const count = input.value.length;
+    const countEl = document.getElementById("charCount");
+    countEl.textContent = `${count} / ${MAX_CHARS}`;
+
+    if (count > MAX_CHARS) {
+      countEl.className = "char-count over";
+    } else if (count > MAX_CHARS * 0.85) {
+      countEl.className = "char-count warn";
+    } else {
+      countEl.className = "char-count";
+    }
+
+    document.getElementById("addBtn").disabled = count === 0 || count > MAX_CHARS;
+  }
+
+  function onKeyDown(e) {
+    if (e.key === "Enter" && e.shiftKey) {
+      e.preventDefault();
+      addLine();
+    }
+  }
+
+  function addLine() {
+    const input = document.getElementById("storyInput");
+    const text = input.value.trim();
+    if (!text || text.length > MAX_CHARS) return;
+
+    const segments = loadStory();
+    segments.push({ text, ts: Date.now() });
+    saveStory(segments);
+
+    updatePlayScreen(segments);
+    toast("Line added. Pass it on!");
+  }
+
+  function revealStory() {
+    const segments = loadStory();
+    if (segments.length === 0) {
+      toast("No lines yet — write something first!");
+      return;
+    }
+    renderReveal(segments);
+    showScreen("revealScreen");
+  }
+
+  function renderReveal(segments) {
+    const meta = document.getElementById("storyMeta");
+    meta.textContent = `${segments.length} line${segments.length === 1 ? "" : "s"}`;
+
+    const list = document.getElementById("segmentList");
+    list.innerHTML = segments.map((seg, i) =>
+      `<div class="segment">
+        <div class="segment-num">Line ${i + 1}</div>
+        <div class="segment-text">${escHtml(seg.text)}</div>
+      </div>`
+    ).join("");
+  }
+
+  function keepWriting() {
+    const segments = loadStory();
+    showScreen("playScreen");
+    updatePlayScreen(segments);
+  }
+
+  function storyToText(segments) {
+    return segments.map((s, i) => `[${i + 1}] ${s.text}`).join("\n\n");
+  }
+
+  function copyStory() {
+    const segments = loadStory();
+    const text = storyToText(segments);
+    navigator.clipboard.writeText(text).then(
+      () => toast("Copied to clipboard!"),
+      () => {
+        const ta = document.createElement("textarea");
+        ta.value = text;
+        document.body.appendChild(ta);
+        ta.select();
+        document.execCommand("copy");
+        document.body.removeChild(ta);
+        toast("Copied!");
+      }
+    );
+  }
+
+  function downloadStory() {
+    const segments = loadStory();
+    const text = storyToText(segments);
+    const blob = new Blob([text], { type: "text/plain" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "story.txt";
+    a.click();
+    URL.revokeObjectURL(url);
+    toast("Downloaded!");
+  }
+
+  function confirmReset() {
+    if (loadStory().length === 0) {
+      resetStory();
+      return;
+    }
+    if (confirm("Start a new story? The current one will be lost unless you export it first.")) {
+      resetStory();
+    }
+  }
+
+  function resetStory() {
+    localStorage.removeItem(STORAGE_KEY);
+    showScreen("startScreen");
+  }
+
+  function escHtml(s) {
+    return String(s).replace(/[&<>"']/g, ch => (
+      { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[ch]
+    ));
+  }
+
+  // On load: resume if a story exists
+  (function init() {
+    const segments = loadStory();
+    if (segments.length > 0) {
+      showScreen("playScreen");
+      updatePlayScreen(segments);
+    }
+  })();
+</script>
+</body>
+</html>
