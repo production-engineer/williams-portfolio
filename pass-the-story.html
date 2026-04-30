@@ -186,6 +186,21 @@
       border-color: color-mix(in srgb, var(--accent) 45%, var(--line));
     }
 
+    .btn.share{
+      background: linear-gradient(135deg, color-mix(in srgb, var(--accent2) 28%, var(--card)), color-mix(in srgb, var(--accent2) 16%, var(--card)));
+      border-color: color-mix(in srgb, var(--accent2) 55%, var(--line));
+    }
+
+    .received-banner{
+      display: none; margin-bottom: 18px; padding: 14px 18px;
+      border-radius: 14px; border: 1px solid color-mix(in srgb, var(--accent2) 50%, var(--line));
+      background: color-mix(in srgb, var(--accent2) 10%, var(--card));
+      font-size: 14px; line-height: 1.5;
+      animation: cardIn .4s cubic-bezier(.175,.885,.32,1.275);
+    }
+    .received-banner.visible{ display: block; }
+    .received-banner strong{ color: var(--accent2); }
+
     footer{ margin-top: 48px; padding-top: 16px; border-top: 1px solid var(--line); color: var(--muted); font-size: 12.5px; display: flex; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
   </style>
 </head>
@@ -221,6 +236,9 @@
 
   <!-- Play Screen -->
   <div id="playScreen" class="screen">
+    <div class="received-banner" id="receivedBanner">
+      <strong>A story was passed to you!</strong> Read the last line below, then add yours and share it on.
+    </div>
     <div class="card">
       <div class="turn-badge">
         <div class="dot"></div>
@@ -249,6 +267,7 @@
       </div>
       <div class="action-row">
         <button class="btn" id="addBtn" onclick="addLine()" disabled>Add My Line</button>
+        <button class="btn share" id="shareBtn" onclick="shareStory()" style="display:none;">Share ↗</button>
         <button class="btn secondary" onclick="revealStory()">Reveal Story</button>
         <button class="btn secondary danger" onclick="confirmReset()">New Story</button>
       </div>
@@ -271,7 +290,8 @@
       <div class="progress-bar-wrap"><div class="progress-bar" id="storyProgress" style="width:100%"></div></div>
       <div class="segments" id="segmentList"></div>
       <div class="export-row">
-        <button class="btn" onclick="copyStory()">Copy to Clipboard</button>
+        <button class="btn share" onclick="shareStory()">Share ↗</button>
+        <button class="btn secondary" onclick="copyStory()">Copy Text</button>
         <button class="btn secondary" onclick="downloadStory()">Download .txt</button>
         <button class="btn secondary danger" onclick="confirmReset()">New Story</button>
       </div>
@@ -305,6 +325,19 @@
 
   let currentCard = null;
   let currentMax = 140;
+
+  function encodeStory(segments) {
+    return btoa(unescape(encodeURIComponent(JSON.stringify(segments))));
+  }
+
+  function decodeStory(encoded) {
+    return JSON.parse(decodeURIComponent(escape(atob(encoded))));
+  }
+
+  function buildShareUrl(segments) {
+    const base = location.origin + location.pathname;
+    return base + "?s=" + encodeStory(segments);
+  }
 
   function loadStory() {
     try { return JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]"); } catch { return []; }
@@ -430,6 +463,8 @@
       toast(`+${currentCard.pts} pt${currentCard.pts !== 1 ? "s" : ""}. Pass it on!`);
     }
 
+    const shareBtn = document.getElementById("shareBtn");
+    if (shareBtn) shareBtn.style.display = segments.length > 0 ? "inline-flex" : "none";
     updatePlayScreen(segments);
   }
 
@@ -496,10 +531,39 @@
     if (confirm("Start a new story? Export first if you want to keep it.")) resetStory();
   }
 
+  function shareStory() {
+    const segments = loadStory();
+    if (segments.length === 0) { toast("Write at least one line first!"); return; }
+    const url = buildShareUrl(segments);
+    const shareData = {
+      title: "Pass the Story",
+      text: `I'm ${segments.length} line${segments.length === 1 ? "" : "s"} into a story — add yours!`,
+      url,
+    };
+    if (navigator.share && navigator.canShare && navigator.canShare(shareData)) {
+      navigator.share(shareData).catch(() => fallbackCopy(url));
+    } else {
+      fallbackCopy(url);
+    }
+  }
+
+  function fallbackCopy(url) {
+    navigator.clipboard.writeText(url).then(
+      () => toast("Link copied! Send it to the next player."),
+      () => {
+        const t = document.createElement("textarea");
+        t.value = url; document.body.appendChild(t); t.select();
+        document.execCommand("copy"); document.body.removeChild(t);
+        toast("Link copied!");
+      }
+    );
+  }
+
   function resetStory() {
     localStorage.removeItem(STORAGE_KEY);
     currentCard = null; currentMax = 140;
     document.getElementById("scoreBadge").classList.remove("visible");
+    history.replaceState(null, "", location.pathname);
     showScreen("startScreen");
   }
 
@@ -508,8 +572,25 @@
   }
 
   (function init() {
+    const params = new URLSearchParams(location.search);
+    const encoded = params.get("s");
+    let received = false;
+    if (encoded) {
+      try {
+        const segments = decodeStory(encoded);
+        if (Array.isArray(segments) && segments.length > 0) {
+          saveStory(segments);
+          received = true;
+        }
+      } catch {}
+      history.replaceState(null, "", location.pathname);
+    }
     const segments = loadStory();
-    if (segments.length > 0) { showScreen("playScreen"); updatePlayScreen(segments); }
+    if (segments.length > 0) {
+      showScreen("playScreen");
+      if (received) document.getElementById("receivedBanner").classList.add("visible");
+      updatePlayScreen(segments);
+    }
   })();
 </script>
 </body>
