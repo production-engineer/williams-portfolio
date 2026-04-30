@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <meta name="color-scheme" content="light dark" />
   <title>Pass the Story</title>
-  <meta name="description" content="An anonymous collaborative story game. Add 140 characters, then pass it on." />
+  <meta name="description" content="A collaborative story game with powerup cards and risk rolls." />
   <style>
     :root{
       --bg:#0b0c10; --card:#111318; --text:#e8eaf0; --muted:#a6adbb;
@@ -14,10 +14,7 @@
       --radius: 16px; --max: 680px;
     }
     @media (prefers-color-scheme: light){
-      :root{
-        --bg:#fafbff; --card:#ffffff; --text:#10131a; --muted:#4f5b6d;
-        --line:#e6eaf2; --shadow: 0 10px 30px rgba(0,0,0,.08);
-      }
+      :root{ --bg:#fafbff; --card:#ffffff; --text:#10131a; --muted:#4f5b6d; --line:#e6eaf2; --shadow: 0 10px 30px rgba(0,0,0,.08); }
     }
     *{ box-sizing:border-box; margin:0; padding:0; }
     html,body{ height:100%; }
@@ -26,8 +23,7 @@
       background: radial-gradient(1200px 700px at 15% 10%, rgba(122,162,255,.14), transparent 60%),
                   radial-gradient(900px 600px at 85% 15%, rgba(98,214,200,.12), transparent 55%),
                   var(--bg);
-      color: var(--text);
-      min-height: 100%;
+      color: var(--text); min-height: 100%;
     }
     a{ color: var(--accent); text-decoration: none; }
     a:hover{ text-decoration: underline; text-underline-offset: 3px; }
@@ -43,10 +39,15 @@
       display: flex; align-items: center; justify-content: space-between; gap: 14px;
     }
     .brand{ font-weight: 650; letter-spacing: .2px; display: flex; align-items: center; gap: 10px; }
-    .logo{
-      width: 30px; height: 30px; border-radius: 10px;
-      background: linear-gradient(135deg, var(--accent), var(--accent2));
+    .logo{ width: 30px; height: 30px; border-radius: 10px; background: linear-gradient(135deg, var(--accent), var(--accent2)); }
+    .score-badge{
+      font-size: 13px; font-weight: 650; color: var(--accent);
+      background: color-mix(in srgb, var(--accent) 12%, var(--card));
+      border: 1px solid color-mix(in srgb, var(--accent) 35%, var(--line));
+      padding: 5px 12px; border-radius: 999px;
+      display: none;
     }
+    .score-badge.visible{ display: block; }
     .pill{
       display: inline-flex; align-items: center; gap: 8px;
       padding: 8px 12px; border-radius: 999px;
@@ -64,8 +65,6 @@
       border-radius: var(--radius);
       box-shadow: var(--shadow);
     }
-
-    /* Screens */
     .screen{ display: none; }
     .screen.active{ display: block; }
 
@@ -75,16 +74,35 @@
     #startScreen p{ color: var(--muted); font-size: 15px; line-height: 1.6; max-width: 420px; margin: 0 auto 32px; }
     .rules{ display: grid; gap: 10px; margin-bottom: 32px; }
     .rule{
-      padding: 14px 16px; border-radius: 12px;
-      border: 1px solid var(--line);
+      padding: 14px 16px; border-radius: 12px; border: 1px solid var(--line);
       background: color-mix(in srgb, var(--card) 92%, transparent);
       font-size: 13.5px; color: var(--muted); text-align: left;
       display: flex; gap: 12px; align-items: flex-start;
     }
-    .rule-num{
-      font-weight: 700; color: var(--accent); flex-shrink: 0;
-      width: 22px; text-align: right;
+    .rule-num{ font-weight: 700; color: var(--accent); flex-shrink: 0; width: 22px; text-align: right; }
+
+    /* Card draw */
+    .card-draw{
+      margin-bottom: 14px;
+      padding: 16px 18px;
+      border-radius: 14px;
+      border: 1px solid var(--line);
+      background: color-mix(in srgb, var(--card) 88%, transparent);
+      display: flex; align-items: center; gap: 14px;
+      animation: cardIn .35s cubic-bezier(.175,.885,.32,1.275);
     }
+    @keyframes cardIn{
+      from{ opacity:0; transform: scale(.92) translateY(-6px); }
+      to{ opacity:1; transform: scale(1) translateY(0); }
+    }
+    .card-draw.risk{ border-color: color-mix(in srgb, #f7a84a 55%, var(--line)); background: color-mix(in srgb, #f7a84a 8%, var(--card)); }
+    .card-draw.power{ border-color: color-mix(in srgb, var(--accent2) 55%, var(--line)); background: color-mix(in srgb, var(--accent2) 8%, var(--card)); }
+    .card-draw.neutral{ border-color: color-mix(in srgb, var(--muted) 35%, var(--line)); }
+    .card-emoji{ font-size: 28px; flex-shrink: 0; line-height: 1; }
+    .card-info{}
+    .card-label{ font-size: 11px; text-transform: uppercase; letter-spacing: .7px; color: var(--muted); margin-bottom: 3px; }
+    .card-name{ font-size: 15px; font-weight: 700; margin-bottom: 2px; }
+    .card-desc{ font-size: 13px; color: var(--muted); line-height: 1.4; }
 
     /* Play screen */
     #playScreen .card{ padding: 20px; margin-bottom: 14px; }
@@ -93,18 +111,17 @@
       display: flex; align-items: center; gap: 8px;
     }
     .dot{ width: 7px; height: 7px; border-radius: 50%; background: var(--accent); flex-shrink: 0; }
-    .last-segment{
-      font-size: 17px; line-height: 1.6; font-style: italic;
-      color: var(--text); margin-bottom: 0;
-    }
+    .last-segment{ font-size: 17px; line-height: 1.6; font-style: italic; color: var(--text); }
     .last-segment.empty{ color: var(--muted); font-style: normal; font-size: 15px; }
+    .last-segment.hidden-prev{ filter: blur(6px); user-select: none; cursor: pointer; transition: filter .3s; }
+    .last-segment.hidden-prev:hover{ filter: blur(3px); }
+    .last-segment.hidden-prev::after{ content: " (tap to peek)"; font-size: 12px; color: var(--muted); font-style: normal; }
     .input-area{ margin-top: 14px; }
     textarea{
       width: 100%; padding: 12px 14px; border-radius: 12px;
       border: 1px solid var(--line);
       background: color-mix(in srgb, var(--card) 92%, transparent);
-      color: var(--text);
-      font-family: inherit; font-size: 15px; line-height: 1.55;
+      color: var(--text); font-family: inherit; font-size: 15px; line-height: 1.55;
       resize: none; outline: none; min-height: 90px;
     }
     textarea:focus{
@@ -123,71 +140,53 @@
       display: inline-flex; align-items: center; gap: 8px;
       padding: 10px 16px; border-radius: 999px;
       border: 1px solid color-mix(in srgb, var(--accent) 45%, var(--line));
-      background: linear-gradient(135deg,
-        color-mix(in srgb, var(--accent) 22%, var(--card)),
-        color-mix(in srgb, var(--accent2) 16%, var(--card)));
-      color: var(--text); font-size: 13.5px; font-weight: 600;
-      cursor: pointer; font-family: inherit;
+      background: linear-gradient(135deg, color-mix(in srgb, var(--accent) 22%, var(--card)), color-mix(in srgb, var(--accent2) 16%, var(--card)));
+      color: var(--text); font-size: 13.5px; font-weight: 600; cursor: pointer; font-family: inherit;
     }
     .btn:hover{ filter: brightness(1.06); }
     .btn:disabled{ opacity: .45; cursor: not-allowed; filter: none; }
-    .btn.secondary{
-      background: color-mix(in srgb, var(--card) 90%, transparent);
-      border: 1px solid var(--line);
-      font-weight: 500;
-    }
-    .btn.danger{
-      background: color-mix(in srgb, #f76a6a 14%, var(--card));
-      border-color: color-mix(in srgb, #f76a6a 45%, var(--line));
-    }
+    .btn.secondary{ background: color-mix(in srgb, var(--card) 90%, transparent); border: 1px solid var(--line); font-weight: 500; }
+    .btn.danger{ background: color-mix(in srgb, #f76a6a 14%, var(--card)); border-color: color-mix(in srgb, #f76a6a 45%, var(--line)); }
 
-    .progress-bar-wrap{
-      height: 3px; border-radius: 999px;
-      background: var(--line); overflow: hidden; margin-bottom: 14px;
-    }
-    .progress-bar{
-      height: 100%; border-radius: 999px;
-      background: linear-gradient(90deg, var(--accent), var(--accent2));
-      transition: width .3s ease;
-    }
+    .progress-bar-wrap{ height: 3px; border-radius: 999px; background: var(--line); overflow: hidden; margin-bottom: 14px; }
+    .progress-bar{ height: 100%; border-radius: 999px; background: linear-gradient(90deg, var(--accent), var(--accent2)); transition: width .3s ease; }
 
     /* Reveal screen */
-    #revealScreen .story-header{
-      display: flex; justify-content: space-between; align-items: flex-start;
-      gap: 12px; margin-bottom: 20px; flex-wrap: wrap;
-    }
+    #revealScreen .story-header{ display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; margin-bottom: 20px; flex-wrap: wrap; }
     #revealScreen h2{ font-size: 22px; letter-spacing: -.3px; }
     .story-meta{ font-size: 13px; color: var(--muted); margin-top: 4px; }
-    .segments{ display: grid; gap: 10px; margin-bottom: 20px; }
-    .segment{
-      padding: 14px 16px; border-radius: 12px;
-      border: 1px solid var(--line);
-      background: color-mix(in srgb, var(--card) 90%, transparent);
+    .final-score{
+      font-size: 24px; font-weight: 700; color: var(--accent);
+      display: flex; align-items: baseline; gap: 6px;
     }
-    .segment-num{ font-size: 11px; color: var(--muted); margin-bottom: 6px; letter-spacing: .5px; text-transform: uppercase; }
+    .final-score span{ font-size: 13px; font-weight: 400; color: var(--muted); }
+    .segments{ display: grid; gap: 10px; margin-bottom: 20px; }
+    .segment{ padding: 14px 16px; border-radius: 12px; border: 1px solid var(--line); background: color-mix(in srgb, var(--card) 90%, transparent); }
+    .segment-header{ display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
+    .segment-num{ font-size: 11px; color: var(--muted); letter-spacing: .5px; text-transform: uppercase; }
+    .segment-card-badge{
+      font-size: 11px; padding: 2px 8px; border-radius: 999px;
+      border: 1px solid var(--line); color: var(--muted);
+    }
     .segment-text{ font-size: 15px; line-height: 1.6; }
     .export-row{ display: flex; gap: 10px; flex-wrap: wrap; }
 
-    /* Toast */
     .toast{
       position: fixed; left: 50%; bottom: 20px; transform: translateX(-50%) translateY(10px);
-      padding: 10px 16px; border-radius: 999px;
-      border: 1px solid var(--line);
+      padding: 10px 16px; border-radius: 999px; border: 1px solid var(--line);
       background: color-mix(in srgb, var(--card) 94%, transparent);
-      box-shadow: var(--shadow);
-      color: var(--text); font-size: 13px;
+      box-shadow: var(--shadow); color: var(--text); font-size: 13px;
       opacity: 0; transition: opacity .2s, transform .2s;
-      pointer-events: none; white-space: nowrap;
-      z-index: 100;
+      pointer-events: none; white-space: nowrap; z-index: 100;
     }
     .toast.show{ opacity: 1; transform: translateX(-50%) translateY(0); }
-
-    footer{
-      margin-top: 48px; padding-top: 16px;
-      border-top: 1px solid var(--line);
-      color: var(--muted); font-size: 12.5px;
-      display: flex; justify-content: space-between; gap: 10px; flex-wrap: wrap;
+    .toast.big{
+      font-size: 16px; font-weight: 650; padding: 14px 22px;
+      background: linear-gradient(135deg, color-mix(in srgb, var(--accent) 18%, var(--card)), color-mix(in srgb, var(--accent2) 14%, var(--card)));
+      border-color: color-mix(in srgb, var(--accent) 45%, var(--line));
     }
+
+    footer{ margin-top: 48px; padding-top: 16px; border-top: 1px solid var(--line); color: var(--muted); font-size: 12.5px; display: flex; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
   </style>
 </head>
 <body>
@@ -198,7 +197,10 @@
       <div class="logo" aria-hidden="true"></div>
       Pass the Story
     </div>
-    <a class="pill" href="./index.html">Back to portfolio</a>
+    <div style="display:flex; gap:10px; align-items:center;">
+      <div class="score-badge" id="scoreBadge">Score 0</div>
+      <a class="pill" href="./index.html">Back</a>
+    </div>
   </div>
 </header>
 
@@ -207,17 +209,13 @@
   <!-- Start Screen -->
   <div id="startScreen" class="screen active">
     <h1>Pass the Story</h1>
-    <p>
-      A collaborative writing game with one rule: you can only see the last line before you write your own.
-      Pass the page when you're done.
-    </p>
-
+    <p>A collaborative writing game. Each turn you draw a card that changes the rules. Score points. Risk it.</p>
     <div class="rules">
-      <div class="rule"><span class="rule-num">1</span> Each player adds up to 140 characters.</div>
+      <div class="rule"><span class="rule-num">1</span> Each player adds up to 140 characters — unless a card says otherwise.</div>
       <div class="rule"><span class="rule-num">2</span> You only see the previous line, not the full story.</div>
-      <div class="rule"><span class="rule-num">3</span> Reveal the full story anytime. Export it when you're done.</div>
+      <div class="rule"><span class="rule-num">3</span> Each turn you draw a card. It may help or challenge you.</div>
+      <div class="rule"><span class="rule-num">4</span> Score points. Reveal and export when done.</div>
     </div>
-
     <button class="btn" onclick="startStory()">Start a Story</button>
   </div>
 
@@ -227,19 +225,20 @@
       <div class="turn-badge">
         <div class="dot"></div>
         <span id="turnLabel">Turn 1</span>
+        <span style="margin-left:auto; font-weight:650; color:var(--accent);" id="inlineScore"></span>
       </div>
-
       <div id="lastSegment" class="last-segment empty">
         This is the start of the story. Write the opening line.
       </div>
     </div>
 
+    <div id="cardDrawArea"></div>
+
     <div class="card">
       <div class="input-area">
         <textarea
           id="storyInput"
-          placeholder="Continue the story..."
-          maxlength="160"
+          placeholder="Your line here..."
           oninput="onInput()"
           onkeydown="onKeyDown(event)"
         ></textarea>
@@ -248,7 +247,6 @@
           <span style="font-size:12px; color:var(--muted);">Shift+Enter to add</span>
         </div>
       </div>
-
       <div class="action-row">
         <button class="btn" id="addBtn" onclick="addLine()" disabled>Add My Line</button>
         <button class="btn secondary" onclick="revealStory()">Reveal Story</button>
@@ -265,15 +263,13 @@
           <h2>The Full Story</h2>
           <div class="story-meta" id="storyMeta"></div>
         </div>
-        <button class="pill" onclick="keepWriting()">Keep writing</button>
+        <div style="display:flex; flex-direction:column; align-items:flex-end; gap:8px;">
+          <div class="final-score" id="finalScore">0 <span>pts</span></div>
+          <button class="pill" onclick="keepWriting()">Keep writing</button>
+        </div>
       </div>
-
-      <div class="progress-bar-wrap">
-        <div class="progress-bar" id="storyProgress" style="width:100%"></div>
-      </div>
-
+      <div class="progress-bar-wrap"><div class="progress-bar" id="storyProgress" style="width:100%"></div></div>
       <div class="segments" id="segmentList"></div>
-
       <div class="export-row">
         <button class="btn" onclick="copyStory()">Copy to Clipboard</button>
         <button class="btn secondary" onclick="downloadStory()">Download .txt</button>
@@ -287,19 +283,42 @@
 <div class="toast" id="toast"></div>
 
 <script>
-  const STORAGE_KEY = "pass-the-story-v1";
-  const MAX_CHARS = 140;
+  const STORAGE_KEY = "pass-the-story-v2";
+
+  const CARDS = [
+    { id: "surge",   emoji: "⚡", name: "Surge",    type: "power",   pts: 1, maxChars: 280, desc: "Double length. You get 280 characters this turn." },
+    { id: "twist",   emoji: "🌀", name: "Twist",    type: "risk",    pts: 3, maxChars: 140, desc: "Risk card. Your line must reverse or contradict what came before." },
+    { id: "blind",   emoji: "🎭", name: "Blind",    type: "risk",    pts: 4, maxChars: 140, desc: "Risk card. The previous line is hidden. Write into the void.", hidesPrev: true },
+    { id: "hook",    emoji: "🎣", name: "Hook",     type: "risk",    pts: 2, maxChars: 140, desc: 'Risk card. Your line must end with "but then…" or "suddenly…"' },
+    { id: "voice",   emoji: "🗣️", name: "Voice",    type: "power",   pts: 2, maxChars: 140, desc: 'Power card. Write in first person. Start with "I…"' },
+    { id: "color",   emoji: "🎨", name: "Color",    type: "power",   pts: 2, maxChars: 140, desc: "Power card. Your line must include a color somewhere." },
+    { id: "free",    emoji: "✏️", name: "Free",     type: "neutral", pts: 1, maxChars: 140, desc: "No constraints. Write whatever moves the story forward." },
+    { id: "free",    emoji: "✏️", name: "Free",     type: "neutral", pts: 1, maxChars: 140, desc: "No constraints. Write whatever moves the story forward." },
+  ];
+
+  const MILESTONES = {
+    5:  "5 lines! The story is taking shape.",
+    10: "10 lines! Getting juicy.",
+    20: "20 lines! A proper epic.",
+    50: "50 lines. Legendary.",
+  };
+
+  let currentCard = null;
+  let currentMax = 140;
 
   function loadStory() {
-    try {
-      return JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]");
-    } catch {
-      return [];
-    }
+    try { return JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]"); } catch { return []; }
   }
 
   function saveStory(segments) {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(segments));
+  }
+
+  function calcScore(segments) {
+    return segments.reduce((sum, seg) => {
+      const card = CARDS.find(c => c.id === seg.cardId) || CARDS[6];
+      return sum + card.pts;
+    }, 0);
   }
 
   function showScreen(id) {
@@ -307,173 +326,190 @@
     document.getElementById(id).classList.add("active");
   }
 
-  function toast(msg) {
+  function toast(msg, big = false) {
     const el = document.getElementById("toast");
     el.textContent = msg;
-    el.classList.add("show");
+    el.className = "toast show" + (big ? " big" : "");
     clearTimeout(toast._t);
-    toast._t = setTimeout(() => el.classList.remove("show"), 2200);
+    toast._t = setTimeout(() => el.classList.remove("show"), big ? 3000 : 2200);
+  }
+
+  function rollCard() {
+    return CARDS[Math.floor(Math.random() * CARDS.length)];
+  }
+
+  function renderCard(card) {
+    const area = document.getElementById("cardDrawArea");
+    area.innerHTML = `
+      <div class="card-draw ${card.type}" style="margin-bottom:14px;">
+        <div class="card-emoji">${card.emoji}</div>
+        <div class="card-info">
+          <div class="card-label">Card drawn</div>
+          <div class="card-name">${card.name} (+${card.pts} pt${card.pts !== 1 ? "s" : ""})</div>
+          <div class="card-desc">${card.desc}</div>
+        </div>
+      </div>`;
   }
 
   function startStory() {
     const segments = loadStory();
-    if (segments.length === 0) {
-      showScreen("playScreen");
-      updatePlayScreen([]);
-    } else {
-      showScreen("playScreen");
-      updatePlayScreen(segments);
-    }
+    showScreen("playScreen");
+    updatePlayScreen(segments);
   }
 
   function updatePlayScreen(segments) {
     const turn = segments.length + 1;
+    const score = calcScore(segments);
+
     document.getElementById("turnLabel").textContent = `Turn ${turn}`;
+    document.getElementById("inlineScore").textContent = `${score} pts`;
+
+    const badge = document.getElementById("scoreBadge");
+    badge.textContent = `Score ${score}`;
+    badge.classList.toggle("visible", segments.length > 0);
+
+    currentCard = rollCard();
+    currentMax = currentCard.maxChars;
+    renderCard(currentCard);
 
     const lastEl = document.getElementById("lastSegment");
     if (segments.length === 0) {
       lastEl.textContent = "This is the start of the story. Write the opening line.";
-      lastEl.classList.add("empty");
+      lastEl.className = "last-segment empty";
     } else {
-      lastEl.textContent = "“" + segments[segments.length - 1].text + "”";
-      lastEl.classList.remove("empty");
+      const prevText = """ + segments[segments.length - 1].text + """;
+      if (currentCard.hidesPrev) {
+        lastEl.textContent = prevText;
+        lastEl.className = "last-segment hidden-prev";
+        lastEl.onclick = () => lastEl.classList.remove("hidden-prev");
+      } else {
+        lastEl.textContent = prevText;
+        lastEl.className = "last-segment";
+        lastEl.onclick = null;
+      }
     }
 
-    document.getElementById("storyInput").value = "";
-    document.getElementById("charCount").textContent = `0 / ${MAX_CHARS}`;
+    const input = document.getElementById("storyInput");
+    input.value = "";
+    input.maxLength = currentMax + 20;
+    document.getElementById("charCount").textContent = `0 / ${currentMax}`;
     document.getElementById("charCount").className = "char-count";
     document.getElementById("addBtn").disabled = true;
-    document.getElementById("storyInput").focus();
+    input.focus();
   }
 
   function onInput() {
     const input = document.getElementById("storyInput");
     const count = input.value.length;
     const countEl = document.getElementById("charCount");
-    countEl.textContent = `${count} / ${MAX_CHARS}`;
-
-    if (count > MAX_CHARS) {
-      countEl.className = "char-count over";
-    } else if (count > MAX_CHARS * 0.85) {
-      countEl.className = "char-count warn";
-    } else {
-      countEl.className = "char-count";
-    }
-
-    document.getElementById("addBtn").disabled = count === 0 || count > MAX_CHARS;
+    countEl.textContent = `${count} / ${currentMax}`;
+    if (count > currentMax) countEl.className = "char-count over";
+    else if (count > currentMax * 0.85) countEl.className = "char-count warn";
+    else countEl.className = "char-count";
+    document.getElementById("addBtn").disabled = count === 0 || count > currentMax;
   }
 
   function onKeyDown(e) {
-    if (e.key === "Enter" && e.shiftKey) {
-      e.preventDefault();
-      addLine();
-    }
+    if (e.key === "Enter" && e.shiftKey) { e.preventDefault(); addLine(); }
   }
 
   function addLine() {
     const input = document.getElementById("storyInput");
     const text = input.value.trim();
-    if (!text || text.length > MAX_CHARS) return;
+    if (!text || text.length > currentMax) return;
 
     const segments = loadStory();
-    segments.push({ text, ts: Date.now() });
+    segments.push({ text, ts: Date.now(), cardId: currentCard.id });
     saveStory(segments);
 
+    const score = calcScore(segments);
+    const milestone = MILESTONES[segments.length];
+    if (milestone) {
+      toast(`${milestone} ${score} pts total`, true);
+    } else {
+      toast(`+${currentCard.pts} pt${currentCard.pts !== 1 ? "s" : ""}. Pass it on!`);
+    }
+
     updatePlayScreen(segments);
-    toast("Line added. Pass it on!");
   }
 
   function revealStory() {
     const segments = loadStory();
-    if (segments.length === 0) {
-      toast("No lines yet — write something first!");
-      return;
-    }
+    if (segments.length === 0) { toast("No lines yet — write something first!"); return; }
     renderReveal(segments);
     showScreen("revealScreen");
   }
 
   function renderReveal(segments) {
-    const meta = document.getElementById("storyMeta");
-    meta.textContent = `${segments.length} line${segments.length === 1 ? "" : "s"}`;
+    const score = calcScore(segments);
+    document.getElementById("storyMeta").textContent = `${segments.length} line${segments.length === 1 ? "" : "s"}`;
+    document.getElementById("finalScore").innerHTML = `${score} <span>pts</span>`;
 
     const list = document.getElementById("segmentList");
-    list.innerHTML = segments.map((seg, i) =>
-      `<div class="segment">
-        <div class="segment-num">Line ${i + 1}</div>
+    list.innerHTML = segments.map((seg, i) => {
+      const card = CARDS.find(c => c.id === seg.cardId) || { emoji: "✏️", name: "Free", pts: 1 };
+      return `<div class="segment">
+        <div class="segment-header">
+          <div class="segment-num">Line ${i + 1}</div>
+          <div class="segment-card-badge">${card.emoji} ${card.name} +${card.pts}</div>
+        </div>
         <div class="segment-text">${escHtml(seg.text)}</div>
-      </div>`
-    ).join("");
+      </div>`;
+    }).join("");
   }
 
   function keepWriting() {
-    const segments = loadStory();
     showScreen("playScreen");
-    updatePlayScreen(segments);
+    updatePlayScreen(loadStory());
   }
 
   function storyToText(segments) {
-    return segments.map((s, i) => `[${i + 1}] ${s.text}`).join("\n\n");
+    const score = calcScore(segments);
+    const lines = segments.map((s, i) => {
+      const card = CARDS.find(c => c.id === s.cardId) || { name: "Free", pts: 1 };
+      return `[${i + 1}] [${card.name}] ${s.text}`;
+    }).join("\n\n");
+    return `Pass the Story — ${segments.length} lines, ${score} pts\n${"─".repeat(40)}\n\n${lines}`;
   }
 
   function copyStory() {
-    const segments = loadStory();
-    const text = storyToText(segments);
+    const text = storyToText(loadStory());
     navigator.clipboard.writeText(text).then(
-      () => toast("Copied to clipboard!"),
-      () => {
-        const ta = document.createElement("textarea");
-        ta.value = text;
-        document.body.appendChild(ta);
-        ta.select();
-        document.execCommand("copy");
-        document.body.removeChild(ta);
-        toast("Copied!");
-      }
+      () => toast("Copied!"),
+      () => { const t = document.createElement("textarea"); t.value = text; document.body.appendChild(t); t.select(); document.execCommand("copy"); document.body.removeChild(t); toast("Copied!"); }
     );
   }
 
   function downloadStory() {
-    const segments = loadStory();
-    const text = storyToText(segments);
-    const blob = new Blob([text], { type: "text/plain" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = "story.txt";
+    const text = storyToText(loadStory());
+    const a = Object.assign(document.createElement("a"), {
+      href: URL.createObjectURL(new Blob([text], { type: "text/plain" })),
+      download: "story.txt"
+    });
     a.click();
-    URL.revokeObjectURL(url);
+    URL.revokeObjectURL(a.href);
     toast("Downloaded!");
   }
 
   function confirmReset() {
-    if (loadStory().length === 0) {
-      resetStory();
-      return;
-    }
-    if (confirm("Start a new story? The current one will be lost unless you export it first.")) {
-      resetStory();
-    }
+    if (loadStory().length === 0) { resetStory(); return; }
+    if (confirm("Start a new story? Export first if you want to keep it.")) resetStory();
   }
 
   function resetStory() {
     localStorage.removeItem(STORAGE_KEY);
+    currentCard = null; currentMax = 140;
+    document.getElementById("scoreBadge").classList.remove("visible");
     showScreen("startScreen");
   }
 
   function escHtml(s) {
-    return String(s).replace(/[&<>"']/g, ch => (
-      { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[ch]
-    ));
+    return String(s).replace(/[&<>"']/g, ch => ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" }[ch]));
   }
 
-  // On load: resume if a story exists
   (function init() {
     const segments = loadStory();
-    if (segments.length > 0) {
-      showScreen("playScreen");
-      updatePlayScreen(segments);
-    }
+    if (segments.length > 0) { showScreen("playScreen"); updatePlayScreen(segments); }
   })();
 </script>
 </body>
